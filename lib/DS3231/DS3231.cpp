@@ -41,11 +41,11 @@
 #define REG_ALARM1_SEC	0x07
 #define REG_ALARM1_MIN	0x08
 #define REG_ALARM1_HOUR	0x09
-#define REG_ALARM1_DAY	0xA0
+#define REG_ALARM1_DATE	0xA0
 
 #define REG_ALARM2_MIN	0xB0
 #define REG_ALARM2_HOUR	0xC0
-#define REG_ALARM2_DAY	0xD0
+#define REG_ALARM2_DATE	0xD0
 
 #define REG_CON		0x0e
 #define REG_STATUS	0x0f
@@ -458,28 +458,26 @@ uint8_t DS3231::_encode(uint8_t value)
 
 
 
-
-
-
-void DS3231::setAlarm1Time(uint8_t hour, uint8_t min, uint8_t sec)
+void DS3231::setAlarm1Time(uint8_t date,uint8_t hour, uint8_t min, uint8_t sec)
 {
-	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((sec>=0) && (sec<60)))
+	if (((date>=1) && (date<31)) && ((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((sec>=0) && (sec<60)))
 	{
-		_writeRegister(REG_ALARM1_HOUR, _encode(hour));
-		_writeRegister(REG_ALARM1_MIN, _encode(min));
 		_writeRegister(REG_ALARM1_SEC, _encode(sec));
+		_writeRegister(REG_ALARM1_MIN, _encode(min));
+		_writeRegister(REG_ALARM1_HOUR, _encode(hour));
+		_writeRegister(REG_ALARM1_DATE, _encode(date));
 	}
 }
 
 
 
-void DS3231::setAlarm2Time(uint8_t hour, uint8_t min, uint8_t sec)
+void DS3231::setAlarm2Time(uint8_t min, uint8_t hour, uint8_t date)
 {
-	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((sec>=0) && (sec<60)))
+	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((date>=1) && (date<31)))
 	{
-		_writeRegister(REG_ALARM2_HOUR, _encode(hour));
 		_writeRegister(REG_ALARM2_MIN, _encode(min));
-		_writeRegister(REG_ALARM2_SEC, _encode(sec));
+		_writeRegister(REG_ALARM2_HOUR, _encode(hour));
+		_writeRegister(REG_ALARM2_DATE, _encode(date));
 	}
 }
 

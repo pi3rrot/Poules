@@ -82,8 +82,8 @@ class DS3231
 		Time	getTime();
 		void	setTime(uint8_t hour, uint8_t min, uint8_t sec);
 
-		void	setAlarm1Time(uint8_t hour, uint8_t min, uint8_t sec);
-		void	setAlarm2Time(uint8_t hour, uint8_t min, uint8_t sec);
+		void	setAlarm1Time(uint8_t date,uint8_t hour, uint8_t min, uint8_t sec);
+		void	setAlarm2Time(uint8_t min, uint8_t hour, uint8_t date);
 
 
 		void	setDate(uint8_t date, uint8_t mon, uint16_t year);
