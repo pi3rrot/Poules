@@ -41,11 +41,11 @@
 #define REG_ALARM1_SEC	0x07
 #define REG_ALARM1_MIN	0x08
 #define REG_ALARM1_HOUR	0x09
-#define REG_ALARM1_DATE	0xA0
+#define REG_ALARM1_DATE	0x0a
 
-#define REG_ALARM2_MIN	0xB0
-#define REG_ALARM2_HOUR	0xC0
-#define REG_ALARM2_DATE	0xD0
+#define REG_ALARM2_MIN	0x0b
+#define REG_ALARM2_HOUR	0x0c
+#define REG_ALARM2_DATE	0x0d
 
 #define REG_CON		0x0e
 #define REG_STATUS	0x0f
@@ -458,26 +458,170 @@ uint8_t DS3231::_encode(uint8_t value)
 
 
 
-void DS3231::setAlarm1Time(uint8_t date,uint8_t hour, uint8_t min, uint8_t sec)
+void DS3231::setAlarm1Time(uint8_t hour, uint8_t min)
 {
-	if (((date>=1) && (date<31)) && ((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((sec>=0) && (sec<60)))
+	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)))
 	{
-		_writeRegister(REG_ALARM1_SEC, _encode(sec));
-		_writeRegister(REG_ALARM1_MIN, _encode(min));
-		_writeRegister(REG_ALARM1_HOUR, _encode(hour));
-		_writeRegister(REG_ALARM1_DATE, _encode(date));
+    min = _encode(min);
+    hour = _encode(hour);
+    
+    uint8_t sec = 0x00;
+    min = min &~ (1<<7);
+    hour = hour &~ (1<<7);;
+    hour = hour &~ (1<<6);
+    uint8_t date = 0x81;
+		_writeRegister(REG_ALARM1_SEC, sec);
+		_writeRegister(REG_ALARM1_MIN, min);
+		_writeRegister(REG_ALARM1_HOUR, hour);
+		_writeRegister(REG_ALARM1_DATE, date);
 	}
 }
 
 
 
-void DS3231::setAlarm2Time(uint8_t min, uint8_t hour, uint8_t date)
+void DS3231::setAlarm2Time(uint8_t hour, uint8_t min)
 {
-	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)) && ((date>=1) && (date<31)))
+	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)))
 	{
+    min = _encode(min);
+    hour = _encode(hour);
+    
+    min = min &~ (1<<7);
+    hour = hour &~ 0x3f;
+    uint8_t date = 0x81;
 		_writeRegister(REG_ALARM2_MIN, _encode(min));
 		_writeRegister(REG_ALARM2_HOUR, _encode(hour));
 		_writeRegister(REG_ALARM2_DATE, _encode(date));
 	}
 }
 
+char *DS3231::getAlarm1Str(uint8_t format)
+{
+    static char output[] = "xx:xx:xx-xxxxxx";
+    uint8_t sec = _readRegister(REG_ALARM1_SEC);
+    uint8_t min = _readRegister(REG_ALARM1_MIN);
+    uint8_t hour = _readRegister(REG_ALARM1_HOUR);
+    uint8_t date = _readRegister(REG_ALARM1_DATE);
+  
+    // Formatage des bits de controle
+    if((sec&(1<<7)) == 0)
+       output[14] = 48;
+    else
+       output[14] = 49;
+  
+    if((min&(1<<7)) == 0)
+       output[13] = 48;
+    else
+       output[13] = 49;
+  
+    if((hour&(1<<7)) == 0)
+      output[12] = 48;
+    else
+      output[12] = 49;
+  
+    if((hour&(1<<6)) == 0)
+       output[10] = 50;
+    else
+       output[10] = 49;
+       
+    if((date&(1<<7)) == 0)
+      output[11] = 48;
+    else
+      output[11] = 49;
+  
+    if((date&(1<<6)) == 0)
+       output[9] = 77;
+    else
+       output[9] = 87;
+  
+    //Fin formatage des bits de controle
+  
+  
+
+    sec = _decode(sec);
+    min = _decode(min);
+    hour = _decodeH(hour);
+  
+    if (hour<10)
+        output[0]=48; // "0" en ASCII
+    else
+        output[0]=char((hour / 10)+48);
+  
+  
+        output[1]=char((hour % 10)+48);
+ 
+    if (min<10)
+        output[3]=48; // "0" en ASCII
+    else
+        output[3]=char((min / 10)+48);
+ 
+    output[4]=char((min % 10)+48);
+ 
+   
+    output[6]=char((sec / 10)+48);
+    output[7]=char((sec % 10)+48);
+    output[16]=0;
+    
+    return (char*)&output;
+}
+
+char *DS3231::getAlarm2Str(uint8_t format)
+{
+    static char output[] = "xx:xx-xxxxx";
+    uint8_t min = _readRegister(REG_ALARM2_MIN);
+    uint8_t hour = _readRegister(REG_ALARM2_HOUR);
+    uint8_t date = _readRegister(REG_ALARM2_DATE);
+  
+    // Formatage des bits de controle
+  
+    if((min&(1<<7)) == 0)
+       output[10] = 48;
+    else
+       output[10] = 49;
+  
+    if((hour&(1<<7)) == 0)
+      output[9] = 48;
+    else
+      output[9] = 49;
+  
+    if((hour&(1<<6)) == 0)
+       output[7] = 50;
+    else
+       output[7] = 49;
+       
+    if((date&(1<<7)) == 0)
+      output[8] = 48;
+    else
+      output[8] = 49;
+  
+    if((date&(1<<6)) == 0)
+       output[6] = 77;
+    else
+       output[6] = 87;
+  
+    //Fin formatage des bits de controle
+  
+  
+
+    min = _decode(min);
+    hour = _decode(hour);
+  
+    if (hour<10)
+        output[0]=48; // "0" en ASCII
+    else
+        output[0]=char((hour / 10)+48);
+  
+  
+        output[1]=char((hour % 10)+48);
+ 
+    if (min<10)
+        output[3]=48; // "0" en ASCII
+    else
+        output[3]=char((min / 10)+48);
+ 
+    output[4]=char((min % 10)+48);
+ 
+    output[11]=0;
+    
+    return (char*)&output;
+}
