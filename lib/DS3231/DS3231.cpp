@@ -455,9 +455,6 @@ uint8_t DS3231::_encode(uint8_t value)
 	return encoded;
 }
 
-
-
-
 void DS3231::setAlarm1Time(uint8_t hour, uint8_t min)
 {
 	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)))
@@ -467,32 +464,14 @@ void DS3231::setAlarm1Time(uint8_t hour, uint8_t min)
     
     uint8_t sec = 0x00;
     min = min &~ (1<<7);
-    hour = hour &~ (1<<7);;
+    hour = hour &~ (1<<7);
     hour = hour &~ (1<<6);
     uint8_t date = 0x81;
 		_writeRegister(REG_ALARM1_SEC, sec);
 		_writeRegister(REG_ALARM1_MIN, min);
 		_writeRegister(REG_ALARM1_HOUR, hour);
 		_writeRegister(REG_ALARM1_DATE, date);
-	}
-}
-
-
-
-void DS3231::setAlarm2Time(uint8_t hour, uint8_t min)
-{
-	if (((hour>=0) && (hour<24)) && ((min>=0) && (min<60)))
-	{
-    min = _encode(min);
-    hour = _encode(hour);
-    
-    min = min &~ (1<<7);
-    hour = hour &~ 0x3f;
-    uint8_t date = 0x81;
-		_writeRegister(REG_ALARM2_MIN, _encode(min));
-		_writeRegister(REG_ALARM2_HOUR, _encode(hour));
-		_writeRegister(REG_ALARM2_DATE, _encode(date));
-	}
+  }
 }
 
 char *DS3231::getAlarm1Str(uint8_t format)
@@ -540,7 +519,7 @@ char *DS3231::getAlarm1Str(uint8_t format)
 
     sec = _decode(sec);
     min = _decode(min);
-    hour = _decodeH(hour);
+    hour = _decode(hour);
   
     if (hour<10)
         output[0]=48; // "0" en ASCII
@@ -565,63 +544,14 @@ char *DS3231::getAlarm1Str(uint8_t format)
     return (char*)&output;
 }
 
-char *DS3231::getAlarm2Str(uint8_t format)
+void DS3231::setControl()
 {
-    static char output[] = "xx:xx-xxxxx";
-    uint8_t min = _readRegister(REG_ALARM2_MIN);
-    uint8_t hour = _readRegister(REG_ALARM2_HOUR);
-    uint8_t date = _readRegister(REG_ALARM2_DATE);
-  
-    // Formatage des bits de controle
-  
-    if((min&(1<<7)) == 0)
-       output[10] = 48;
-    else
-       output[10] = 49;
-  
-    if((hour&(1<<7)) == 0)
-      output[9] = 48;
-    else
-      output[9] = 49;
-  
-    if((hour&(1<<6)) == 0)
-       output[7] = 50;
-    else
-       output[7] = 49;
-       
-    if((date&(1<<7)) == 0)
-      output[8] = 48;
-    else
-      output[8] = 49;
-  
-    if((date&(1<<6)) == 0)
-       output[6] = 77;
-    else
-       output[6] = 87;
-  
-    //Fin formatage des bits de controle
-  
-  
+  _writeRegister(REG_CON, 0x07);
+  Serial.print("set de la conf");
+}
 
-    min = _decode(min);
-    hour = _decode(hour);
-  
-    if (hour<10)
-        output[0]=48; // "0" en ASCII
-    else
-        output[0]=char((hour / 10)+48);
-  
-  
-        output[1]=char((hour % 10)+48);
- 
-    if (min<10)
-        output[3]=48; // "0" en ASCII
-    else
-        output[3]=char((min / 10)+48);
- 
-    output[4]=char((min % 10)+48);
- 
-    output[11]=0;
-    
-    return (char*)&output;
+void DS3231::resetAlarm()
+{
+  _writeRegister(REG_STATUS, 0x00);
+  Serial.print("reset de l'alarme");
 }

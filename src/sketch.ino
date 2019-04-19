@@ -8,7 +8,7 @@
 #include <DS3231.h>
 #include <string.h>
 
-#include "../lib/calsol.h"
+//#include "../lib/calsol.h"
 
 // Pour steppers
 #define STEP_REV 400
@@ -23,6 +23,8 @@ Stepper myStepper2(stepsPerRevolution, 2, 3, 4, 5);
 // Module DS3231 pour l'heure
 DS3231  rtc(4, 5);
 
+int interruptPin = 2;
+
 struct Date_t {
 	unsigned long annee;
 	unsigned long mois;
@@ -36,18 +38,34 @@ void stepperOff() {
 	}
 }
 
+void Alarme()
+{
+	Serial.print("CA VA PETER !!!!!!");
+}
 
 void setup() {
+	
+	
+	pinMode(interruptPin, INPUT_PULLUP);
+	attachInterrupt(INT0, Alarme, FALLING);
+	
 	Serial.begin(115200);
 	rtc.begin();  
-		rtc.setAlarm1Time(8, 20);
-		rtc.setAlarm2Time(14, 45);
+	Time t;
+	t = rtc.getTime();
+	rtc.setAlarm1Time(t.hour, (t.min + 1));
+	rtc.setControl();
+	rtc.resetAlarm();
 	// The following lines can be uncommented to set the date and time
 
-	/*  rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
-	  rtc.setTime(22, 14, 0);     // Set the time to 12:00:00 (24hr format)
-	  rtc.setDate(4, 11, 2019);   // Set the date to January 1st, 2014 */
+	/* rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
+	  rtc.setTime(20, 18, 0);     // Set the time to 12:00:00 (24hr format)
+	  rtc.setDate(17, 4, 2019);   // Set the date to January 1st, 2014 */
 
+}
+
+unsigned long getDelay() {
+	
 }
 
 void loop() {
@@ -63,6 +81,9 @@ void loop() {
 	stepperOff();
 	delay(3000);*/
 
+
+		
+
 	// Send Day-of-Week
 	Serial.print(rtc.getDOWStr());
 	Serial.print(" ");
@@ -77,10 +98,9 @@ void loop() {
 	
 	Serial.print("Alarm 1 : ");
 	Serial.println(rtc.getAlarm1Str());
-	Serial.println("-----------------------------------------------");
-	Serial.print("Alarm 2 : ");
-	Serial.println(rtc.getAlarm2Str());	
+	
 	
 	// Wait one second before repeating :)
 	delay (1000);
+
 }
