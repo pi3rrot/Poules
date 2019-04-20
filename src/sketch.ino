@@ -19,9 +19,9 @@ Stepper myStepper1(stepsPerRevolution, 6, 7, 8, 9);
 Stepper myStepper2(stepsPerRevolution, 2, 3, 4, 5);
 
 // Module DS3231 pour l'heure
-DS3231  rtc(4, 5);
+DS3231  rtc(10, 11);
 
-int interruptPin = 2;
+int interruptPin = 18;
 
 int sens_ouverture = 2; //etat indeterminé
 
@@ -164,7 +164,7 @@ void loop() {
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT0, fermer, FALLING);
+                	                        attachInterrupt(INT5, fermer, FALLING);
 					}
 					
 					// Cas de figure 2
@@ -180,7 +180,7 @@ void loop() {
                                                 rtc.resetAlarm();
 
                                                 // Attachement d'une interruption sur front descendant de INT0
-                                                attachInterrupt(INT0, ouvrir, FALLING);
+                                                attachInterrupt(INT5, ouvrir, FALLING);
 					}
 
  					// Cas de figure 3
@@ -196,7 +196,7 @@ void loop() {
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT0, fermer, FALLING);
+                	                        attachInterrupt(INT5, fermer, FALLING);
 
 					}
 
@@ -213,7 +213,7 @@ void loop() {
                                                 rtc.resetAlarm();
 	
 					        // Attachement d'une interruption sur front descendant de INT0
-					        attachInterrupt(INT0, ouvrir, FALLING);
+					        attachInterrupt(INT5, ouvrir, FALLING);
 					}			
 
 					else if ( t.hour == DateSol_t[i][3] && t.min > DateSol_t[i][4] ) {
@@ -228,7 +228,7 @@ void loop() {
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT0, fermer, FALLING);
+                	                        attachInterrupt(INT5, fermer, FALLING);
 					}
 
 					else if ( t.hour < DateSol_t[i][3] ) {
@@ -243,7 +243,7 @@ void loop() {
                                                 rtc.resetAlarm();
 	
 					        // Attachement d'une interruption sur front descendant de INT0
-					        attachInterrupt(INT0, ouvrir, FALLING);
+					        attachInterrupt(INT5, ouvrir, FALLING);
 
 					}
 
@@ -259,7 +259,7 @@ void loop() {
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT0, fermer, FALLING);
+                	                        attachInterrupt(INT5, fermer, FALLING);
 					}
 	
 				}
@@ -286,20 +286,18 @@ void loop() {
 	sens_ouverture = 2;
 
 	// Configuration du type de sleep
-//	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-//	sleep_enable();
+	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+	sleep_enable();
 	// Activation du mode sleep
-//	sleep_mode();
+	sleep_mode();
     
-//attachInterrupt(INT0, fermer, LOW);
-
  
 	// CPU en mode sleep,
-	// Attente de l'interruption INT0 qui réveillera le CPU
+	// Attente de l'interruption INT5 qui réveillera le CPU
      
 	// Désactivation du mode sleep
-//	sleep_disable();
-     
+	sleep_disable();
+	     
 
 
 
