@@ -547,11 +547,11 @@ char *DS3231::getAlarm1Str(uint8_t format)
 void DS3231::setControl()
 {
   _writeRegister(REG_CON, 0x07);
-  Serial.print("set de la conf");
+//  Serial.print("set de la conf");
 }
 
 void DS3231::resetAlarm()
 {
   _writeRegister(REG_STATUS, 0x00);
-  Serial.print("reset de l'alarme");
+//  Serial.print("reset de l'alarme");
 }
