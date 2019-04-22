@@ -107,15 +107,14 @@ void setup() {
 
 void setRTC() {
 	rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(9, 54, 0);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(20, 4, 2019);   // Set the date to January 1st, 2014 
+	rtc.setTime(21, 22, 20);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(22, 4, 2019);   // Set the date to January 1st, 2014 
 }
 
 void loop() {
 	//	Serial.print(rtc.getDOWStr());
 	clearSerial();
         Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
-
 
 	Time t;
 	t = rtc.getTime();
@@ -133,135 +132,99 @@ void loop() {
 	Serial.println(rtc.getTimeStr());
 	Serial.println();
 
-
-
 	/*
-	 * Attention on met toujours + 1 minute par rapport à l'heure dans le registre
-	 * Changé !
+	 * On créé un timestamp en minute pour pouvoir se positionner dans le timeline
+	 * 3 cas de figure :
+	 * - Avant ouverture
+	 * - Apres ouverture et avant fermeture
+	 * - Apres fermeture
 	 */
+
+	float timestamp_time, timestamp_cal_matin, timestamp_cal_soir, timestamp_minuit, timestamp_2359;
+
 	for (int i=0 ; i <  sizeof(DateSol_t) / sizeof(DateSol_t[0]) ; i++) {
 		if (t.year == DateSol_t[i][0]) {
 			if (t.mon == DateSol_t[i][1]) {
 				if (t.date == DateSol_t[i][2]) {
-					if (t.hour > DateSol_t[i][3] && t.hour < DateSol_t[i][5] ) {
-						/*
-						 * On test Annee, mois, jour et minute
-						 * Si boot entre ouverture et fermeture =>set alarm au soir => Fermeture
-						 * Si boot après fermeture mais le même jour => set alarm a j+1 => ouverture
-						 * Si boot avant ouverture du matin => set alarm au matin => Ouverture
-						 * 
-						 */
 
-						// Cas de figure 1
-						Serial.println("=> Night (brrrr) is comming... DEV");
+					timestamp_time = ((float)i * 24 * 60) + ((float)t.hour * 60) + (float)t.min;
+					timestamp_cal_matin = ((float)i * 24 * 60) + ((float)DateSol_t[i][3] * 60) + (float)DateSol_t[i][4];
+					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6];
+					timestamp_minuit = ((float)i * 24 * 60);
+					timestamp_2359 = ((float)i * 24 * 60) + (24 * 60) -1;
+
+
+					Serial.print("timestamp_time :");
+					Serial.println(timestamp_time);
+					Serial.println();
+
+					Serial.print("timestamp_minuit :");
+					Serial.println(timestamp_minuit);
+					Serial.print("timestamp_cal_matin :");
+					Serial.println(timestamp_cal_matin);
+					Serial.print("timestamp_cal_soir :");
+					Serial.println(timestamp_cal_soir);
+					Serial.print("timestamp_2359 :");
+					Serial.println(timestamp_2359);
+					Serial.println();
+
+
+					if ( (timestamp_time > timestamp_minuit) && (timestamp_time < timestamp_cal_matin) ) {
+					// Cas1
+						Serial.println("=> Day is comming... CAS1");
 						Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][5] );
+                                                Serial.print( DateSol_t[i][3] );
                                                 Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][6] );
+                                                Serial.println( DateSol_t[i][4] );
 
-					        rtc.setAlarm1Time(t.hour, (t.min + 1));
+					        rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
 					        rtc.setControl();
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT5, fermer, FALLING);
+                	                        attachInterrupt(INT5, ouvrir, FALLING);
 					}
 					
-					// Cas de figure 2
-					else if ( t.hour == DateSol_t[i][5] && t.min > DateSol_t[i][6] ) {
-						Serial.println("=> Night is engaged, next step tomorrow morning...");
+					// Cas2
+					else if ( (timestamp_time > timestamp_cal_matin) && (timestamp_time < timestamp_cal_soir) ) {
+						Serial.println("=> Night is comming, CAS2");
                                                 Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i+1][3] );
+                                                Serial.print( DateSol_t[i][5] );
                                                 Serial.print(" : ");
-                                                Serial.println( DateSol_t[i+1][4] );
+                                                Serial.println( DateSol_t[i][6] );
 
-                                                rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]);
+                                                rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
                                                 rtc.setControl();
                                                 rtc.resetAlarm();
 
                                                 // Attachement d'une interruption sur front descendant de INT0
-                                                attachInterrupt(INT5, ouvrir, FALLING);
+                                                attachInterrupt(INT5, fermer, FALLING);
 					}
 
- 					// Cas de figure 3
-					else if ( t.hour == DateSol_t[i][5] && t.min < DateSol_t[i][6] ) {
-						Serial.println("=> Night (brrrr) is comming...");
+ 					//Cas3
+					else if ( (timestamp_time > timestamp_cal_soir) && (timestamp_time < timestamp_2359) ) {
+						Serial.println("=> Day is comming tomorrow, CAS3");
 						Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][5] );
+                                                Serial.print( DateSol_t[i+1][3] );
                                                 Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][6] );
+                                                Serial.println( DateSol_t[i+1][4] );
 
-					        rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
+					        //rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]);
+					        rtc.setAlarm1Time(t.hour, t.min+1);
 					        rtc.setControl();
 					        rtc.resetAlarm();
 			
         	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT5, fermer, FALLING);
-
+                	                        attachInterrupt(INT5, ouvrir, FALLING);
 					}
-
-					// Cas de figure 4
-					else if ( t.hour == DateSol_t[i][3] && t.min < DateSol_t[i][4] ) {
-						Serial.println("=> Day is comming...");
-                                                Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][3] );
-                                                Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][4] );
-
-                                                rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
-                                                rtc.setControl();
-                                                rtc.resetAlarm();
-	
-					        // Attachement d'une interruption sur front descendant de INT0
-					        attachInterrupt(INT5, ouvrir, FALLING);
-					}			
-
-					else if ( t.hour == DateSol_t[i][3] && t.min > DateSol_t[i][4] ) {
-						Serial.println("=> Night (brrrr) is comming...");
-						Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][5] );
-                                                Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][6] );
-
-					        rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
-					        rtc.setControl();
-					        rtc.resetAlarm();
-			
-        	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT5, fermer, FALLING);
+					
+					else {
+						Serial.print("=> Waiting ");
+						Serial.print(61 - t.sec);
+						Serial.println(" seconds for minute change, and reset.");
+						delay((61 - t.sec) * 1000);
+						asm volatile ("  jmp 0");
 					}
-
-					else if ( t.hour < DateSol_t[i][3] ) {
-						Serial.println("=> Day is comming...");
-                                                Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][3] );
-                                                Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][4] );
-
-                                                rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
-                                                rtc.setControl();
-                                                rtc.resetAlarm();
-	
-					        // Attachement d'une interruption sur front descendant de INT0
-					        attachInterrupt(INT5, ouvrir, FALLING);
-
-					}
-
-					else if ( t.hour > DateSol_t[i][3] ) {
-						Serial.println("=> Night (brrrr) is comming...");
-						Serial.print("=> Setting Alarm1 registers @ ");
-                                                Serial.print( DateSol_t[i][5] );
-                                                Serial.print(" : ");
-                                                Serial.println( DateSol_t[i][6] );
-
-					        rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
-					        rtc.setControl();
-					        rtc.resetAlarm();
-			
-        	                                // Attachement d'une interruption sur front descendant de INT0
-                	                        attachInterrupt(INT5, fermer, FALLING);
-					}
-	
 				}
 			}				
 		}
@@ -273,17 +236,7 @@ void loop() {
 	 * TODO
 	 */
 
-	if (sens_ouverture == 1) {
-	        Serial.println("-=-=-=-=- CA OUVRE !!!!!! -=-=-=-=-=-=-");
-		ouvrirPorte(1);
-	}
-
-	if (sens_ouverture == 0) {
-	        Serial.println("-=-=-=-=- CA FERME !!!!!! -=-=-=-=-=-=-");
-		ouvrirPorte(0);
-	}
-
-	sens_ouverture = 2;
+	delay(1000);
 
 	// Configuration du type de sleep
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
@@ -298,10 +251,17 @@ void loop() {
 	// Désactivation du mode sleep
 	sleep_disable();
 	     
+	if (sens_ouverture == 1) {
+	        Serial.println("-=-=-=-=- CA OUVRE !!!!!! -=-=-=-=-=-=-");
+		ouvrirPorte(1);
+	}
 
+	if (sens_ouverture == 0) {
+	        Serial.println("-=-=-=-=- CA FERME !!!!!! -=-=-=-=-=-=-");
+		ouvrirPorte(0);
+	}
 
-
-
+	sens_ouverture = 2;
 
 	/*
 	Serial.print(" ");
@@ -313,12 +273,6 @@ void loop() {
 	// Send time
 	Serial.println(rtc.getTimeStr());
 
-	
 	Serial.print("Alarm 1 : ");
 	Serial.println(rtc.getAlarm1Str());
-	
-	
-	// Wait one second before repeating :) */
-	delay (5000);
-	clearSerial();
 }
