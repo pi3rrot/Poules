@@ -19,9 +19,13 @@ Stepper myStepper1(stepsPerRevolution, 6, 7, 8, 9);
 Stepper myStepper2(stepsPerRevolution, 2, 3, 4, 5);
 
 // Module DS3231 pour l'heure
-DS3231  rtc(10, 11);
+int gnd_rtc = 14;
+int vcc_rtc = 15;
+DS3231  rtc(16, 17);
+int sqw_rtc = 18;
 
-int interruptPin = 18;
+
+int enable_ralay_motor = 22;
 
 int sens_ouverture = 2; //etat indeterminé
 
@@ -49,33 +53,33 @@ void fermer() {
 
 
 
-/********************************
- * Fonction d'accès à la porte 
+/*
+ * Fonction d'accès à la porte
  * val = 0, fermer la porte
  * val = 1, ouvrir la porte
  */
 void ouvrirPorte(bool val) {
-        myStepper1.setSpeed(100);
-        myStepper2.setSpeed(100);
+	myStepper1.setSpeed(100);
+	myStepper2.setSpeed(100);
 
-        if (val == false) {
-                for(int i=0; i<=STEP_REV*REV; i++) {
-                        myStepper1.step(1);
-                        myStepper2.step(-1);
-                }
-        }
+	if (val == false) {
+	        for(int i=0; i<=STEP_REV*REV; i++) {
+	                myStepper1.step(1);
+	                myStepper2.step(-1);
+	        }
+	}
 
-        if (val == true) {
-                for(int i=0; i<=STEP_REV*REV; i++) {
-                        myStepper1.step(-1);
-                        myStepper2.step(1);
-                }
-        }
+	if (val == true) {
+	        for(int i=0; i<=STEP_REV*REV; i++) {
+	                myStepper1.step(-1);
+	                myStepper2.step(1);
+	        }
+	}
 
-        // Stepper OFF
-        for(int i=2; i<=9; i++) {
-                digitalWrite(i, LOW);
-        }
+	// Stepper OFF
+	for(int i=2; i<=9; i++) {
+	        digitalWrite(i, LOW);
+	}
 
 
 }
@@ -90,15 +94,28 @@ void clearSerial() {
 }
 
 void setup() {
-	
+
+	pinMode(enable_ralay_motor, OUTPUT);
+	digitalWrite(enable_ralay_motor, HIGH);
+	for(int i=0; i<5; i++) {
+		digitalWrite(enable_ralay_motor, LOW);
+		delay(200);
+		digitalWrite(enable_ralay_motor, HIGH);
+		delay(200);
+	}
+
 	/*
 	 * On prépare le terrain pour le PIN qui nécéssite une resistance de PullUp
 	 * L'interruption est déclarée dans le loop()
 	 */
-	pinMode(interruptPin, INPUT_PULLUP);
+	pinMode(sqw_rtc, INPUT_PULLUP);
+	pinMode(vcc_rtc, OUTPUT);
+	pinMode(gnd_rtc, OUTPUT);
+	digitalWrite(vcc_rtc, HIGH);
+	digitalWrite(gnd_rtc, LOW);
 
-	rtc.begin();  
-	
+	rtc.begin();
+
 	/*
 	 * The following lines can be uncommented to set the date and time
 	 */
@@ -108,25 +125,25 @@ void setup() {
 void setRTC() {
 	rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
 	rtc.setTime(21, 22, 20);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(22, 4, 2019);   // Set the date to January 1st, 2014 
+	rtc.setDate(22, 4, 2019);   // Set the date to January 1st, 2014
 }
 
 void loop() {
 	//	Serial.print(rtc.getDOWStr());
 	clearSerial();
-        Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
+	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
 
 	Time t;
 	t = rtc.getTime();
 
-        int myval;
-        myval = sizeof(DateSol_t) / sizeof(DateSol_t[0]);
+	int myval;
+	myval = sizeof(DateSol_t) / sizeof(DateSol_t[0]);
 	Serial.println();
 	Serial.print("=> Taille DateSol_t : ");
-        Serial.println( myval  );
+	Serial.println( myval  );
 
 	Serial.println();
-        Serial.print("=> Date : ");
+	Serial.print("=> Date : ");
 	Serial.println(rtc.getDateStr());
 	Serial.print("=> Heure : ");
 	Serial.println(rtc.getTimeStr());
@@ -177,14 +194,16 @@ void loop() {
                                                 Serial.print(" : ");
                                                 Serial.println( DateSol_t[i][4] );
 
-					        rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
+					        //rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
+									rtc.setAlarm1Time(t.hour, t.min+1);
+
 					        rtc.setControl();
 					        rtc.resetAlarm();
-			
+
         	                                // Attachement d'une interruption sur front descendant de INT0
                 	                        attachInterrupt(INT5, ouvrir, FALLING);
 					}
-					
+
 					// Cas2
 					else if ( (timestamp_time > timestamp_cal_matin) && (timestamp_time < timestamp_cal_soir) ) {
 						Serial.println("=> Night is comming, CAS2");
@@ -193,7 +212,10 @@ void loop() {
                                                 Serial.print(" : ");
                                                 Serial.println( DateSol_t[i][6] );
 
-                                                rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
+                                                //rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
+																								rtc.setAlarm1Time(t.hour, t.min+1);
+
+
                                                 rtc.setControl();
                                                 rtc.resetAlarm();
 
@@ -213,11 +235,11 @@ void loop() {
 					        rtc.setAlarm1Time(t.hour, t.min+1);
 					        rtc.setControl();
 					        rtc.resetAlarm();
-			
+
         	                                // Attachement d'une interruption sur front descendant de INT0
                 	                        attachInterrupt(INT5, ouvrir, FALLING);
 					}
-					
+
 					else {
 						Serial.print("=> Waiting ");
 						Serial.print(61 - t.sec);
@@ -226,7 +248,7 @@ void loop() {
 						asm volatile ("  jmp 0");
 					}
 				}
-			}				
+			}
 		}
 
 	}
@@ -243,22 +265,32 @@ void loop() {
 	sleep_enable();
 	// Activation du mode sleep
 	sleep_mode();
-    
- 
+
+
 	// CPU en mode sleep,
 	// Attente de l'interruption INT5 qui réveillera le CPU
-     
+
 	// Désactivation du mode sleep
 	sleep_disable();
-	     
+
 	if (sens_ouverture == 1) {
-	        Serial.println("-=-=-=-=- CA OUVRE !!!!!! -=-=-=-=-=-=-");
+		digitalWrite(enable_ralay_motor, LOW);
+		delay(500);
+		Serial.println("-=-=-=-=- CA OUVRE !!!!!! -=-=-=-=-=-=-");
 		ouvrirPorte(1);
+		delay(5000);
+		digitalWrite(enable_ralay_motor, HIGH);
+		delay(100);
 	}
 
 	if (sens_ouverture == 0) {
-	        Serial.println("-=-=-=-=- CA FERME !!!!!! -=-=-=-=-=-=-");
-		ouvrirPorte(0);
+		digitalWrite(enable_ralay_motor, LOW);
+		delay(500);
+	  Serial.println("-=-=-=-=- CA FERME !!!!!! -=-=-=-=-=-=-");
+		//ouvrirPorte(0);
+		delay(5000);
+		digitalWrite(enable_ralay_motor, HIGH);
+		delay(100);
 	}
 
 	sens_ouverture = 2;
@@ -275,4 +307,5 @@ void loop() {
 
 	Serial.print("Alarm 1 : ");
 	Serial.println(rtc.getAlarm1Str());
+	*/
 }
