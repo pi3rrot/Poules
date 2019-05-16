@@ -41,7 +41,6 @@ void fermer() {
 	sens_ouverture = 0;
 }
 
-
 /*
  * Fonction d'accès à la porte
  * val = 0, fermer la porte
@@ -49,42 +48,125 @@ void fermer() {
  */
 void ouvrirPorte(bool val) {
 	if (val == false) {
-	        // On set le pont en H +12V 0V
-					digitalWrite(pont_h_1, LOW);
-					digitalWrite(pont_h_2, HIGH);
-					delay(100);
-					// On envoi la purée
-					digitalWrite(motor_power, LOW);
+		// On set le pont en H +12V 0V
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
+		delay(100);
+		// On envoi la purée
+		digitalWrite(motor_power, LOW);
 
-					// delai?
-					delay(3000);
+		// delai?
+		delay(3000);
 	}
 
 	if (val == true) {
-	        // On set le pont en H pour 0V -12V
-					digitalWrite(pont_h_1, HIGH);
-					digitalWrite(pont_h_2, LOW);
-					delay(100);
-					// On envoi la purée
-					digitalWrite(motor_power, LOW);
-				// On attend le pin qui va bien
-				while (digitalRead(fin_course_ouverture) != HIGH) {
-					delayMicroseconds(10);
-				}
+		// On set le pont en H pour 0V -12V
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, LOW);
+		delay(100);
+		// On envoi la purée
+		digitalWrite(motor_power, LOW);
+		// On attend le pin qui va bien
+		while (digitalRead(fin_course_ouverture) != HIGH) {
+			delayMicroseconds(10);
+		}
 	}
 
+	// On coupe tout les relais
+	digitalWrite(pont_h_1, HIGH);
+	digitalWrite(pont_h_2, HIGH);
 	digitalWrite(motor_power, HIGH);
 
 }
 
 
 void clearSerial() {
-        Serial.begin(115200);
-        Serial.write(27);       // ESC command
-        Serial.print("[2J");    // clear screen command
-        Serial.write(27);
-        Serial.print("[H");     // cursor to home command
+	Serial.begin(115200);
+	Serial.write(27);       // ESC command
+	Serial.print("[2J");    // clear screen command
+	Serial.write(27);
+	Serial.print("[H");     // cursor to home command
 }
+
+
+
+void selftest_func(void) {
+
+	bool read;
+
+	Serial.println("Self-Test Menu");
+	Serial.println("--------------------");
+	Serial.println("1. Read Time");
+	Serial.println("2. Switch all relays 2 times");
+	Serial.println("3. Read fin_course_ouverture");
+	Serial.println("4. Detect position and switch position");
+	Serial.println("5. Reset Arduino");
+	Serial.println("--------------------");
+	Serial.println("Type the number and press enter");
+
+	Serial.flush(); //flush all previous received and transmitted data
+	while(!Serial.available()) ;
+	char ch;
+	ch = Serial.read();
+	switch(ch)
+	{
+	 case '1':
+	 	Serial.println("Read Time");
+		selftest_func();
+
+	case '2':
+		Serial.println("Switch pont_h_1...");
+		digitalWrite(pont_h_1, LOW);
+		delay(500);
+		digitalWrite(pont_h_2, HIGH);
+		delay(500);
+
+		Serial.println("Switch pont_h_2...");
+		digitalWrite(pont_h_1, LOW);
+		delay(500);
+		digitalWrite(pont_h_2, HIGH);
+		delay(500);
+
+		Serial.println("Switch motor_power...");
+		digitalWrite(motor_power, LOW);
+		delay(500);
+		digitalWrite(motor_power, HIGH);
+		delay(500);
+
+		selftest_func();
+
+	case '3':
+		read = digitalRead(fin_course_ouverture);
+		if (read == 1) {
+			Serial.println("=> fin_course_ouverture enclenché !\n");
+		}
+		else {
+			Serial.println("=> fin_course_ouverture non enclenché.\n");
+
+		}
+		selftest_func();
+
+	case '4':
+		read = digitalRead(fin_course_ouverture);
+		if (read == 1) {
+			Serial.println("=> Porte ouverte, on switch 2x");
+			ouvrirPorte(1);
+			ouvrirPorte(0);
+		}
+		else {
+			ouvrirPorte(0);
+			ouvrirPorte(1);
+		}
+		selftest_func();
+
+
+	case '5':
+			asm volatile ("  jmp 0");
+
+	}
+}
+
+
 
 
 void setup() {
@@ -135,6 +217,16 @@ void loop() {
 	//	Serial.print(rtc.getDOWStr());
 	clearSerial();
 	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
+	Serial.println("Press 's' to enter self-test mode in 5 senconds");
+	delay(5000);
+
+	// Test pour une fonction self-test
+	char ch = 0;
+	ch = Serial.read();
+	switch(ch){
+		case 's':
+			selftest_func();
+	}
 
 	Time t;
 	t = rtc.getTime();
@@ -143,7 +235,7 @@ void loop() {
 	myval = sizeof(DateSol_t) / sizeof(DateSol_t[0]);
 	Serial.println();
 	Serial.print("=> Taille DateSol_t : ");
-	Serial.println( myval  );
+	Serial.println( myval );
 
 	Serial.println();
 	Serial.print("=> Date : ");
@@ -245,6 +337,7 @@ void loop() {
 
 					else {
 						Serial.print("=> Waiting ");
+						asm volatile ("  jmp 0");
 						Serial.print(61 - t.sec);
 						Serial.println(" seconds for minute change, and reset.");
 						delay((61 - t.sec) * 1000);
@@ -260,7 +353,9 @@ void loop() {
 	 * Slepping mode et attente du réveil de l'intérruption.
 	 */
 
-	delay(1000);
+
+	Serial.println("=> Going to sleep... see you... zZzzZzzzZzz");
+	delay(100);
 
 	// Configuration du type de sleep
 	set_sleep_mode(SLEEP_MODE_PWR_DOWN);
@@ -281,8 +376,8 @@ void loop() {
 	}
 
 	if (sens_ouverture == 0) {
-	  Serial.println("-=-=-=-=-=f- CA FERME ! -=-=-=-=-=-=-");
-		//ouvrirPorte(0);
+	  Serial.println("-=-=-=-=-=- CA FERME ! -=-=-=-=-=-=-");
+		ouvrirPorte(0);
 		delay(5000);
 	}
 	sens_ouverture = 2;
