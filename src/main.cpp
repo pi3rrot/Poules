@@ -11,6 +11,7 @@
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
 int vcc_rtc = 15;
+int vcc_interr = 53;
 DS3231  rtc(16, 17);
 int sqw_rtc = 18;
 
@@ -19,6 +20,8 @@ int pont_h_1 = 29;
 int pont_h_2 = 27;
 
 int fin_course_ouverture = 25;
+
+
 
 int sens_ouverture = 2; //etat indeterminé
 
@@ -49,20 +52,20 @@ void fermer() {
 void ouvrirPorte(bool val) {
 	if (val == false) {
 		// On set le pont en H +12V 0V
-		digitalWrite(pont_h_1, LOW);
-		digitalWrite(pont_h_2, HIGH);
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, LOW);
 		delay(100);
 		// On envoi la purée
 		digitalWrite(motor_power, LOW);
 
 		// delai?
-		delay(3000);
+		delay(7000);
 	}
 
 	if (val == true) {
 		// On set le pont en H pour 0V -12V
-		digitalWrite(pont_h_1, HIGH);
-		digitalWrite(pont_h_2, LOW);
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
 		delay(100);
 		// On envoi la purée
 		digitalWrite(motor_power, LOW);
@@ -101,6 +104,10 @@ void selftest_func(void) {
 	Serial.println("3. Read fin_course_ouverture");
 	Serial.println("4. Detect position and switch position");
 	Serial.println("5. Reset Arduino");
+
+	Serial.println("+. + motor for 100ms");
+	Serial.println("-. - motor for 100ms");
+	Serial.println("a. open/close forever");
 	Serial.println("--------------------");
 	Serial.println("Type the number and press enter");
 
@@ -148,7 +155,7 @@ void selftest_func(void) {
 
 	case '4':
 		read = digitalRead(fin_course_ouverture);
-		if (read == 1) {
+		if (read == LOW) {
 			Serial.println("=> Porte ouverte, on switch 2x");
 			ouvrirPorte(1);
 			ouvrirPorte(0);
@@ -163,6 +170,42 @@ void selftest_func(void) {
 	case '5':
 			asm volatile ("  jmp 0");
 
+
+	case '+':
+		// On set le pont en H pour 0V -12V
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, LOW);
+		delay(100);
+		// On envoi la purée
+		digitalWrite(motor_power, LOW);
+		delay(200);
+		digitalWrite(motor_power, HIGH);
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, HIGH);
+		selftest_func();
+
+
+	case '-':
+		// On set le pont en H +12V 0V
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
+		delay(100);
+		// On envoi la purée
+		digitalWrite(motor_power, LOW);
+		delay(250);
+		digitalWrite(motor_power, HIGH);
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, HIGH);
+		selftest_func();
+
+		case 'a':
+			uint16_t i = 0;
+			while(true) {
+				ouvrirPorte(1);
+				ouvrirPorte(0);
+				Serial.println(i);
+				i++;
+			}
 	}
 }
 
@@ -174,10 +217,13 @@ void setup() {
 	pinMode(motor_power, OUTPUT);
 	pinMode(pont_h_1, OUTPUT);
 	pinMode(pont_h_2, OUTPUT);
-	pinMode(fin_course_ouverture, OUTPUT);
+	pinMode(fin_course_ouverture, INPUT_PULLUP);
+	pinMode(vcc_interr, OUTPUT);
 
 	// On coupe le relay qui envoi la purée
 	digitalWrite(motor_power, HIGH);
+
+	digitalWrite(vcc_interr, HIGH);
 
 	// On fait 2 cycles pour entendre que ca initialise.
 	for(int i=0; i<2; i++) {
@@ -289,8 +335,8 @@ void loop() {
 						Serial.print(" : ");
 						Serial.println( DateSol_t[i][4] );
 
-						//rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
-						rtc.setAlarm1Time(t.hour, t.min+1);
+						rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
+						//rtc.setAlarm1Time(t.hour, t.min+1);
 
 						rtc.setControl();
 						rtc.resetAlarm();
@@ -307,8 +353,8 @@ void loop() {
 						Serial.print(" : ");
 						Serial.println( DateSol_t[i][6] );
 
-						//rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
-						rtc.setAlarm1Time(t.hour, t.min+1);
+						rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
+						//rtc.setAlarm1Time(t.hour, t.min+1);
 
 
 						rtc.setControl();
@@ -326,8 +372,8 @@ void loop() {
 						Serial.print(" : ");
 						Serial.println( DateSol_t[i+1][4] );
 
-						//rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]);
-						rtc.setAlarm1Time(t.hour, t.min+1);
+						rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]);
+						//rtc.setAlarm1Time(t.hour, t.min+1);
 						rtc.setControl();
 						rtc.resetAlarm();
 
