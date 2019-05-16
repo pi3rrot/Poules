@@ -3,20 +3,9 @@
 #include <avr/power.h>
 #include <avr/sleep.h>
 
-#include <Stepper.h>
 #include <DS3231.h>
 
 #include "../lib/calsol.h"
-
-// Pour steppers
-#define STEP_REV 400
-#define REV 10
-
-const int stepsPerRevolution = 400;
-// 360 / 0.9deg
-
-Stepper myStepper1(stepsPerRevolution, 6, 7, 8, 9);
-Stepper myStepper2(stepsPerRevolution, 2, 3, 4, 5);
 
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
@@ -24,8 +13,11 @@ int vcc_rtc = 15;
 DS3231  rtc(16, 17);
 int sqw_rtc = 18;
 
+int motor_power = 31;
+int pont_h_1 = 22;
+int pont_h_2 = 23;
 
-int enable_ralay_motor = 22;
+int fin_course_ouverture = 53;
 
 int sens_ouverture = 2; //etat indeterminé
 
@@ -59,28 +51,32 @@ void fermer() {
  * val = 1, ouvrir la porte
  */
 void ouvrirPorte(bool val) {
-	myStepper1.setSpeed(100);
-	myStepper2.setSpeed(100);
-
 	if (val == false) {
-	        for(int i=0; i<=STEP_REV*REV; i++) {
-	                myStepper1.step(1);
-	                myStepper2.step(-1);
-	        }
+	        // On set le pont en H +12V 0V
+					digitalWrite(pont_h_1, LOW);
+					digitalWrite(pont_h_2, HIGH);
+					delay(100);
+					// On envoi la purée
+					digitalWrite(motor_power, LOW);
+
+					// delai?
+					delay(3000);
 	}
 
 	if (val == true) {
-	        for(int i=0; i<=STEP_REV*REV; i++) {
-	                myStepper1.step(-1);
-	                myStepper2.step(1);
-	        }
+	        // On set le pont en H pour 0V -12V
+					digitalWrite(pont_h_1, HIGH);
+					digitalWrite(pont_h_2, LOW);
+					delay(100);
+					// On envoi la purée
+					digitalWrite(motor_power, LOW);
+				// On attend le pin qui va bien
+				while (digitalRead(fin_course_ouverture) != HIGH) {
+					delayMicroseconds(10);
+				}
 	}
 
-	// Stepper OFF
-	for(int i=2; i<=9; i++) {
-	        digitalWrite(i, LOW);
-	}
-
+	digitalWrite(motor_power, HIGH);
 
 }
 
@@ -94,13 +90,24 @@ void clearSerial() {
 }
 
 void setup() {
+	// On dit que c'est des sorties
+	pinMode(motor_power, OUTPUT);
+	pinMode(pont_h_1, OUTPUT);
+	pinMode(pont_h_2, OUTPUT);
+	pinMode(fin_course_ouverture, OUTPUT);
 
-	pinMode(enable_ralay_motor, OUTPUT);
-	digitalWrite(enable_ralay_motor, HIGH);
-	for(int i=0; i<5; i++) {
-		digitalWrite(enable_ralay_motor, LOW);
+
+
+	// On coupe le relay qui envoi la purée
+	digitalWrite(motor_power, HIGH);
+
+	// On fait 2 cycles pour entendre que ca initialise.
+	for(int i=0; i<2; i++) {
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
 		delay(200);
-		digitalWrite(enable_ralay_motor, HIGH);
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, LOW);
 		delay(200);
 	}
 
@@ -123,9 +130,9 @@ void setup() {
 }
 
 void setRTC() {
-	rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(21, 22, 20);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(22, 4, 2019);   // Set the date to January 1st, 2014
+	rtc.setDOW(WEDNESDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(21, 21, 00);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(15, 5, 2019);   // Set the date to January 1st, 2014
 }
 
 void loop() {
@@ -274,23 +281,17 @@ void loop() {
 	sleep_disable();
 
 	if (sens_ouverture == 1) {
-		digitalWrite(enable_ralay_motor, LOW);
 		delay(500);
 		Serial.println("-=-=-=-=- CA OUVRE !!!!!! -=-=-=-=-=-=-");
 		ouvrirPorte(1);
 		delay(5000);
-		digitalWrite(enable_ralay_motor, HIGH);
-		delay(100);
 	}
 
 	if (sens_ouverture == 0) {
-		digitalWrite(enable_ralay_motor, LOW);
 		delay(500);
 	  Serial.println("-=-=-=-=- CA FERME !!!!!! -=-=-=-=-=-=-");
 		//ouvrirPorte(0);
 		delay(5000);
-		digitalWrite(enable_ralay_motor, HIGH);
-		delay(100);
 	}
 
 	sens_ouverture = 2;
