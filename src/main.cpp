@@ -8,6 +8,8 @@
 
 #include "../lib/calsol.h"
 
+#define SHIFT_NIGHT 45
+
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
 int vcc_rtc = 15;
@@ -50,22 +52,24 @@ void fermer() {
  * val = 1, ouvrir la porte
  */
 void ouvrirPorte(bool val) {
+	//on ferme
 	if (val == false) {
 		// On set le pont en H +12V 0V
-		digitalWrite(pont_h_1, HIGH);
-		digitalWrite(pont_h_2, LOW);
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
 		delay(100);
 		// On envoi la purée
 		digitalWrite(motor_power, LOW);
 
 		// delai?
-		delay(7000);
+		delay(2000);
 	}
 
+	//on ouvre
 	if (val == true) {
 		// On set le pont en H pour 0V -12V
-		digitalWrite(pont_h_1, LOW);
-		digitalWrite(pont_h_2, HIGH);
+		digitalWrite(pont_h_1, HIGH);
+		digitalWrite(pont_h_2, LOW);
 		delay(100);
 		// On envoi la purée
 		digitalWrite(motor_power, LOW);
@@ -104,9 +108,10 @@ void selftest_func(void) {
 	Serial.println("3. Read fin_course_ouverture");
 	Serial.println("4. Detect position and switch position");
 	Serial.println("5. Reset Arduino");
-
-	Serial.println("+. + motor for 100ms");
-	Serial.println("-. - motor for 100ms");
+	Serial.println("o. open door");
+	Serial.println("c. close door");
+	Serial.println("+. open door for 100ms");
+	Serial.println("-. close dor for 100ms");
 	Serial.println("a. open/close forever");
 	Serial.println("--------------------");
 	Serial.println("Type the number and press enter");
@@ -155,13 +160,12 @@ void selftest_func(void) {
 
 	case '4':
 		read = digitalRead(fin_course_ouverture);
-		if (read == LOW) {
-			Serial.println("=> Porte ouverte, on switch 2x");
-			ouvrirPorte(1);
+		if (read == HIGH) {
+			Serial.println("=> Porte ouverte, on ferme");
 			ouvrirPorte(0);
 		}
 		else {
-			ouvrirPorte(0);
+			Serial.println("=> Porte fermée, on ouvre");
 			ouvrirPorte(1);
 		}
 		selftest_func();
@@ -169,6 +173,15 @@ void selftest_func(void) {
 
 	case '5':
 			asm volatile ("  jmp 0");
+
+	case 'o':
+		ouvrirPorte(1);
+
+
+	case 'c':
+		ouvrirPorte(0);
+
+
 
 
 	case '+':
@@ -260,6 +273,9 @@ void setRTC() {
 }
 
 void loop() {
+
+	bool read;
+	read = digitalRead(fin_course_ouverture);
 	//	Serial.print(rtc.getDOWStr());
 	clearSerial();
 	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
@@ -341,6 +357,11 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
+
+						if(read == HIGH) {
+							ouvrirPorte(0);
+						}
+
 						// Attachement d'une interruption sur front descendant de INT0
 						attachInterrupt(INT5, ouvrir, FALLING);
 					}
@@ -353,12 +374,21 @@ void loop() {
 						Serial.print(" : ");
 						Serial.println( DateSol_t[i][6] );
 
-						rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]);
-						//rtc.setAlarm1Time(t.hour, t.min+1);
+						//car shift, on additionne le shift au timestamp_cal_soir
+						if (DateSol_t[i][6]+SHIFT_NIGHT >= 60) {
+							rtc.setAlarm1Time(DateSol_t[i][5]+1, (DateSol_t[i][6]+SHIFT_NIGHT)-60);
+						}
+						else
+							rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]+SHIFT_NIGHT);
+							//rtc.setAlarm1Time(t.hour, t.min+1);
 
 
 						rtc.setControl();
 						rtc.resetAlarm();
+
+						if(read == LOW) {
+							ouvrirPorte(1);
+						}
 
 						// Attachement d'une interruption sur front descendant de INT0
 						attachInterrupt(INT5, fermer, FALLING);
@@ -376,6 +406,13 @@ void loop() {
 						//rtc.setAlarm1Time(t.hour, t.min+1);
 						rtc.setControl();
 						rtc.resetAlarm();
+
+						Serial.println(read);
+
+						if(read == 1) {
+							ouvrirPorte(0);
+							delay(100);
+						}
 
 						// Attachement d'une interruption sur front descendant de INT0
 						attachInterrupt(INT5, ouvrir, FALLING);
