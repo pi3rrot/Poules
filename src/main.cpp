@@ -8,7 +8,7 @@
 
 #include "../lib/calsol.h"
 
-#define SHIFT_NIGHT 45
+uint8_t SHIFT_NIGHT=45;
 
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
@@ -369,19 +369,23 @@ void loop() {
 					// Cas2
 					else if ( (timestamp_time > timestamp_cal_matin) && (timestamp_time < timestamp_cal_soir) ) {
 						Serial.println("=> Night is comming, CAS2");
-						Serial.print("=> Setting Alarm1 registers @ ");
-						Serial.print( DateSol_t[i][5] );
-						Serial.print(" : ");
-						Serial.println( DateSol_t[i][6] );
+						Serial.print("=> Setting Alarm1 registers @ (45min SHIFT_NIGHT)");
+
 
 						//car shift, on additionne le shift au timestamp_cal_soir
 						if (DateSol_t[i][6]+SHIFT_NIGHT >= 60) {
+							Serial.print( DateSol_t[i][5] + 1 );
+							Serial.print(" : ");
+							Serial.println( DateSol_t[i][5]+1, (DateSol_t[i][6]+SHIFT_NIGHT)-60 );
 							rtc.setAlarm1Time(DateSol_t[i][5]+1, (DateSol_t[i][6]+SHIFT_NIGHT)-60);
 						}
-						else
+						else {
+							Serial.print( DateSol_t[i][5] );
+							Serial.print(" : ");
+							Serial.println( DateSol_t[i][6] + SHIFT_NIGHT);
 							rtc.setAlarm1Time(DateSol_t[i][5], DateSol_t[i][6]+SHIFT_NIGHT);
 							//rtc.setAlarm1Time(t.hour, t.min+1);
-
+						}
 
 						rtc.setControl();
 						rtc.resetAlarm();
