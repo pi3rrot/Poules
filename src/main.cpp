@@ -9,6 +9,7 @@
 #include "../lib/calsol.h"
 
 uint8_t SHIFT_NIGHT=45;
+uint8_t SHIFT_DAY=30;
 
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
@@ -32,6 +33,50 @@ struct Date_t {
 	unsigned long mois;
 	unsigned long jour;
 };
+
+
+
+void setdate() {
+	Serial.println("Set Date format : 05/06/19 for example");
+	char buffer[] = {' ',' ',' ',' ',' ',' ',' ', ' '};
+	while (!Serial.available()); // Wait for characters
+ 		Serial.readBytesUntil('\n', buffer, 8);
+
+		int incomingValue = atoi(buffer);
+		Serial.println(incomingValue);
+
+		rtc.setDate(atoi(buffer[0])*10+atoi(buffer[1]),
+								atoi(buffer[3])*10+atoi(buffer[4]),
+								atoi(buffer[6])*10+atoi(buffer[7]) );   // Set the date to January 1st, 2014
+
+}
+
+
+void settime() {
+	Serial.println("Set time format : 01:34 for example");
+	char buffer[] = {' ',' ',' ',' ',' '};
+	while (!Serial.available()); // Wait for characters
+ 		Serial.readBytesUntil('\n', buffer, 5);
+
+		int incomingValue = atoi(buffer);
+		Serial.println(incomingValue);
+
+		rtc.setTime(atoi(buffer[0])*10+buffer[1],
+								atoi(buffer[3])*10+atoi(buffer[4]),
+								00);
+
+}
+
+/*
+void setRTC() {
+	rtc.setDOW(WEDNESDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(25, 21, 00);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(25, 6, 2019);   // Set the date to January 1st, 2014
+}
+*/
+
+
+
 
 
 /*
@@ -108,6 +153,8 @@ void selftest_func(void) {
 	Serial.println("3. Read fin_course_ouverture");
 	Serial.println("4. Detect position and switch position");
 	Serial.println("5. Reset Arduino");
+	Serial.println("6. Set Date");
+	Serial.println("7. Set time");
 	Serial.println("o. open door");
 	Serial.println("c. close door");
 	Serial.println("+. open door for 100ms");
@@ -174,6 +221,12 @@ void selftest_func(void) {
 	case '5':
 			asm volatile ("  jmp 0");
 
+	case '6':
+			setdate();
+
+	case '7':
+			settime();
+
 	case 'o':
 		ouvrirPorte(1);
 
@@ -225,6 +278,9 @@ void selftest_func(void) {
 
 
 
+
+
+
 void setup() {
 	// On dit que c'est des sorties
 	pinMode(motor_power, OUTPUT);
@@ -264,12 +320,6 @@ void setup() {
 	 * The following lines can be uncommented to set the date and time
 	 */
 	//setRTC();
-}
-
-void setRTC() {
-	rtc.setDOW(WEDNESDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(21, 21, 00);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(15, 5, 2019);   // Set the date to January 1st, 2014
 }
 
 void loop() {
@@ -322,8 +372,8 @@ void loop() {
 				if (t.date == DateSol_t[i][2]) {
 
 					timestamp_time = ((float)i * 24 * 60) + ((float)t.hour * 60) + (float)t.min;
-					timestamp_cal_matin = ((float)i * 24 * 60) + ((float)DateSol_t[i][3] * 60) + (float)DateSol_t[i][4];
-					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6];
+					timestamp_cal_matin = ((float)i * 24 * 60) + ((float)DateSol_t[i][3] * 60) + (float)DateSol_t[i][4] - SHIFT_DAY;
+					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6] - SHIFT_NIGHT;
 					timestamp_minuit = ((float)i * 24 * 60);
 					timestamp_2359 = ((float)i * 24 * 60) + (24 * 60) -1;
 
@@ -347,12 +397,21 @@ void loop() {
 						// Cas1
 						Serial.println("=> Day is comming... CAS1");
 						Serial.print("=> Setting Alarm1 registers @ ");
-						Serial.print( DateSol_t[i][3] );
-						Serial.print(" : ");
-						Serial.println( DateSol_t[i][4] );
 
-						rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]);
-						//rtc.setAlarm1Time(t.hour, t.min+1);
+						//car shift, on soustrait le shift au timestamp_cal_matin
+						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
+							Serial.print( DateSol_t[i][3] - 1 );
+							Serial.print(" : ");
+							Serial.println( (DateSol_t[i][4]-SHIFT_DAY)+60 );
+							rtc.setAlarm1Time( DateSol_t[i][3]-1, (DateSol_t[i][4]-SHIFT_DAY)+60 );
+						}
+						else {
+							Serial.print( DateSol_t[i][3] );
+							Serial.print(" : ");
+							Serial.println( DateSol_t[i][4] - SHIFT_DAY);
+							rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]-SHIFT_DAY);
+							//rtc.setAlarm1Time(t.hour, t.min+1);
+						}
 
 						rtc.setControl();
 						rtc.resetAlarm();
@@ -366,6 +425,7 @@ void loop() {
 						attachInterrupt(INT5, ouvrir, FALLING);
 					}
 
+
 					// Cas2
 					else if ( (timestamp_time > timestamp_cal_matin) && (timestamp_time < timestamp_cal_soir) ) {
 						Serial.println("=> Night is comming, CAS2");
@@ -376,7 +436,7 @@ void loop() {
 						if (DateSol_t[i][6]+SHIFT_NIGHT >= 60) {
 							Serial.print( DateSol_t[i][5] + 1 );
 							Serial.print(" : ");
-							Serial.println( DateSol_t[i][5]+1, (DateSol_t[i][6]+SHIFT_NIGHT)-60 );
+							Serial.println( (DateSol_t[i][6]+SHIFT_NIGHT)-60 );
 							rtc.setAlarm1Time(DateSol_t[i][5]+1, (DateSol_t[i][6]+SHIFT_NIGHT)-60);
 						}
 						else {
@@ -402,12 +462,22 @@ void loop() {
 					else if ( (timestamp_time > timestamp_cal_soir) && (timestamp_time < timestamp_2359) ) {
 						Serial.println("=> Day is comming tomorrow, CAS3");
 						Serial.print("=> Setting Alarm1 registers @ ");
-						Serial.print( DateSol_t[i+1][3] );
-						Serial.print(" : ");
-						Serial.println( DateSol_t[i+1][4] );
 
-						rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]);
-						//rtc.setAlarm1Time(t.hour, t.min+1);
+						//car shift, on soustrait le shift au timestamp_cal_matin
+						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
+							Serial.print( DateSol_t[i][3] - 1 );
+							Serial.print(" : ");
+							Serial.println( (DateSol_t[i][4]-SHIFT_DAY)+60 );
+							rtc.setAlarm1Time( DateSol_t[i][3]-1, (DateSol_t[i][4]-SHIFT_DAY)+60 );
+						}
+						else {
+							Serial.print( DateSol_t[i][3] );
+							Serial.print(" : ");
+							Serial.println( DateSol_t[i][4] - SHIFT_DAY);
+							rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]-SHIFT_DAY);
+							//rtc.setAlarm1Time(t.hour, t.min+1);
+						}
+
 						rtc.setControl();
 						rtc.resetAlarm();
 
