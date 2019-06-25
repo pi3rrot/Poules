@@ -373,7 +373,7 @@ void loop() {
 
 					timestamp_time = ((float)i * 24 * 60) + ((float)t.hour * 60) + (float)t.min;
 					timestamp_cal_matin = ((float)i * 24 * 60) + ((float)DateSol_t[i][3] * 60) + (float)DateSol_t[i][4] - SHIFT_DAY;
-					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6] - SHIFT_NIGHT;
+					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6] + SHIFT_NIGHT;
 					timestamp_minuit = ((float)i * 24 * 60);
 					timestamp_2359 = ((float)i * 24 * 60) + (24 * 60) -1;
 
