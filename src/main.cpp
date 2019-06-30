@@ -138,9 +138,9 @@ void clearSerial() {
 }
 
 void setRTC() {
-	rtc.setDOW(WEDNESDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(3, 36, 45);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(27, 6, 2019);   // Set the date to January 1st, 2014
+	rtc.setDOW(SUNDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(20, 33, 45);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(30, 6, 2019);   // Set the date to January 1st, 2014
 }
 
 
@@ -380,8 +380,6 @@ void loop() {
 					timestamp_minuit = ((float)i * 24 * 60);
 					timestamp_2359 = ((float)i * 24 * 60) + (24 * 60) -1;
 
-					delay(200);
-
 					Serial.print("timestamp_time :      ");
 					Serial.println(timestamp_time);
 					Serial.println();
@@ -414,16 +412,14 @@ void loop() {
 							Serial.print(" : ");
 							Serial.print( DateSol_t[i][4] - SHIFT_DAY);
 							rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]-SHIFT_DAY);
-							//rtc.setAlarm1Time(t.hour, t.min+1);
 						}
+
 						Serial.print(" with ");
 						Serial.print(SHIFT_DAY);
 						Serial.println("minutes less.");
 
-
 						rtc.setControl();
 						rtc.resetAlarm();
-
 
 						if(read == HIGH) {
 							ouvrirPorte(0);
@@ -476,16 +472,16 @@ void loop() {
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
 						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
-							Serial.print( DateSol_t[i][3] - 1 );
+							Serial.print( DateSol_t[i+1][3] - 1 );
 							Serial.print(":");
-							Serial.print( (DateSol_t[i][4]-SHIFT_DAY)+60 );
-							rtc.setAlarm1Time( DateSol_t[i][3]-1, (DateSol_t[i][4]-SHIFT_DAY)+60 );
+							Serial.print( (DateSol_t[i+1][4]-SHIFT_DAY)+60 );
+							rtc.setAlarm1Time( DateSol_t[i+1][3]-1, (DateSol_t[i+1][4]-SHIFT_DAY)+60 );
 						}
 						else {
-							Serial.print( DateSol_t[i][3] );
+							Serial.print( DateSol_t[i+1][3] );
 							Serial.print(":");
-							Serial.print( DateSol_t[i][4] - SHIFT_DAY);
-							rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]-SHIFT_DAY);
+							Serial.print( DateSol_t[i+1][4] - SHIFT_DAY);
+							rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]-SHIFT_DAY);
 							//rtc.setAlarm1Time(t.hour, t.min+1);
 						}
 
@@ -506,10 +502,8 @@ void loop() {
 					}
 
 					else {
-						Serial.print("=> Waiting ");
-						Serial.print(61 - t.sec);
-						Serial.println(" seconds for minute change, and reset.");
-						delay((61 - t.sec) * 1000);
+						Serial.print("=> Waiting 5 seconds and reset, wait for minute change");
+						delay(5000);
 						asm volatile ("  jmp 0");
 					}
 				}
