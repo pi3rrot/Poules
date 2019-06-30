@@ -225,14 +225,21 @@ void selftest_func(void) {
 
 	case '6':
 			setRTC();
+			selftest_func();
+
 
 
 	case 'o':
+		Serial.println("=> On ferme !");
 		ouvrirPorte(1);
+		selftest_func();
+
 
 
 	case 'c':
+		Serial.println("=> On ferme !");
 		ouvrirPorte(0);
+		selftest_func();
 
 
 
@@ -272,6 +279,9 @@ void selftest_func(void) {
 				Serial.println(i);
 				i++;
 			}
+			selftest_func();
+
+
 	}
 }
 
@@ -362,9 +372,9 @@ void loop() {
 	/*
 	 * On créé un timestamp en minute pour pouvoir se positionner dans le timeline
 	 * 3 cas de figure :
-	 * - Avant ouverture
-	 * - Apres ouverture et avant fermeture
-	 * - Apres fermeture
+	 * - Avant ouverture (CAS 1)
+	 * - Apres ouverture et avant fermeture (CAS 2)
+	 * - Apres fermeture (CAS 3) attention, taper dans j+1
 	 */
 
 	float timestamp_time, timestamp_cal_matin, timestamp_cal_soir, timestamp_minuit, timestamp_2359;
@@ -468,6 +478,20 @@ void loop() {
  					//Cas3
 					else if ( (timestamp_time > timestamp_cal_soir) && (timestamp_time < timestamp_2359) ) {
 						Serial.println("=> Day is comming tomorrow, CAS3");
+						Serial.print("=> On tape dans J+1 ");
+						Serial.print(DateSol_t[i+1][2]);
+						Serial.print("/");
+						Serial.print(DateSol_t[i+1][1]);
+						Serial.print("/");
+						Serial.print(DateSol_t[i+1][0]);
+						Serial.println();
+
+						Serial.print("=> CalSol without SHIFT_DAY ");
+						Serial.print( DateSol_t[i+1][3] );
+						Serial.print(":");
+						Serial.print( DateSol_t[i+1][4]);
+						Serial.println();
+
 						Serial.print("=> Setting Alarm1 registers @ ");
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
@@ -503,7 +527,7 @@ void loop() {
 
 					else {
 						Serial.print("=> Waiting 5 seconds and reset, wait for minute change");
-						delay(5000);
+						delay(2000);
 						asm volatile ("  jmp 0");
 					}
 				}
