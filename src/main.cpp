@@ -51,14 +51,6 @@ void setdate() {
 
 }
 
-
-void settime() {
-	rtc.setDOW(WEDNESDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(18, 50, 00);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(26, 6, 2019);   // Set the date to January 1st, 2014
-
-}
-
 void read_time() {
 	Time t;
 	t = rtc.getTime();
@@ -138,15 +130,16 @@ void clearSerial() {
 }
 
 void setRTC() {
-	rtc.setDOW(SUNDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(20, 33, 45);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(30, 6, 2019);   // Set the date to January 1st, 2014
+	rtc.setDOW(TUESDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(0, 4, 45);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(2, 7, 2019);   // Set the date to January 1st, 2014
 }
 
 
 void selftest_func(void) {
 
 	bool read;
+
 
 	Serial.println("Self-Test Menu");
 	Serial.println("--------------------");
@@ -302,7 +295,6 @@ void setup() {
 
 	// On coupe le relay qui envoi la purée
 	digitalWrite(motor_power, HIGH);
-
 	digitalWrite(vcc_interr, HIGH);
 
 	// On fait 2 cycles pour entendre que ca initialise.
@@ -326,11 +318,6 @@ void setup() {
 	digitalWrite(gnd_rtc, LOW);
 
 	rtc.begin();
-
-	/*
-	 * The following lines can be uncommented to set the date and time
-	 */
-	//setRTC();
 }
 
 
@@ -339,7 +326,6 @@ void loop() {
 
 	bool read;
 	read = digitalRead(fin_course_ouverture);
-	//	Serial.print(rtc.getDOWStr());
 	clearSerial();
 	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
 	Serial.println("Press 's' to enter self-test mode in 5 senconds");
@@ -408,6 +394,22 @@ void loop() {
 					if ( (timestamp_time > timestamp_minuit) && (timestamp_time < timestamp_cal_matin) ) {
 						// Cas1
 						Serial.println("=> Day is comming... CAS1");
+
+						Serial.print("=> On tape dans J normal car après minuit ");
+						Serial.print(DateSol_t[i][2]);
+						Serial.print("/");
+						Serial.print(DateSol_t[i][1]);
+						Serial.print("/");
+						Serial.print(DateSol_t[i][0]);
+						Serial.println();
+
+						Serial.print("=> CalSol without SHIFT_DAY ");
+						Serial.print( DateSol_t[i][3] );
+						Serial.print(":");
+						Serial.print( DateSol_t[i][4]);
+						Serial.println();
+
+
 						Serial.print("=> Setting Alarm1 registers @ ");
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
@@ -495,7 +497,7 @@ void loop() {
 						Serial.print("=> Setting Alarm1 registers @ ");
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
-						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
+						if (DateSol_t[i+1][4]-SHIFT_DAY < 0) {
 							Serial.print( DateSol_t[i+1][3] - 1 );
 							Serial.print(":");
 							Serial.print( (DateSol_t[i+1][4]-SHIFT_DAY)+60 );
@@ -539,7 +541,6 @@ void loop() {
 	/*
 	 * Slepping mode et attente du réveil de l'intérruption.
 	 */
-
 
 	Serial.println("=> Going to sleep... see you... zZzzZzzzZzz");
 	delay(100);
