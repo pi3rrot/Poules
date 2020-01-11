@@ -96,7 +96,7 @@ void ouvrirPorte(bool val) {
 		digitalWrite(motor_power, LOW);
 
 		// delai?
-		delay(2000);
+		delay(2050);
 	}
 
 	//on ouvre
