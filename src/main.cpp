@@ -23,7 +23,7 @@ int pont_h_1 = 29;
 int pont_h_2 = 27;
 
 int fin_course_ouverture = 25;
-
+int fin_course_fermeture = 49;
 
 
 int sens_ouverture = 2; //etat indeterminé
@@ -33,7 +33,6 @@ struct Date_t {
 	unsigned long mois;
 	unsigned long jour;
 };
-
 
 
 void setdate() {
@@ -65,14 +64,10 @@ void read_time() {
 }
 
 
-
-
-
 /*
  * Variable globales pour interruptions
  */
-void ouvrir()
-{
+void ouvrir() {
 	sens_ouverture = 1;
 }
 
@@ -86,29 +81,31 @@ void fermer() {
  * val = 1, ouvrir la porte
  */
 void ouvrirPorte(bool val) {
-	//on ferme
-	if (val == false) {
-		// On set le pont en H +12V 0V
-		digitalWrite(pont_h_1, LOW);
-		digitalWrite(pont_h_2, HIGH);
-		delay(100);
-		// On envoi la purée
-		digitalWrite(motor_power, LOW);
-
-		// delai?
-		delay(2050);
-	}
-
 	//on ouvre
 	if (val == true) {
-		// On set le pont en H pour 0V -12V
+		// On set le pont en H +12V 0V
 		digitalWrite(pont_h_1, HIGH);
 		digitalWrite(pont_h_2, LOW);
 		delay(100);
 		// On envoi la purée
 		digitalWrite(motor_power, LOW);
+
 		// On attend le pin qui va bien
 		while (digitalRead(fin_course_ouverture) != HIGH) {
+			delayMicroseconds(10);
+		}
+	}
+
+	//on ferme
+	if (val == false) {
+		// On set le pont en H pour 0V -12V
+		digitalWrite(pont_h_1, LOW);
+		digitalWrite(pont_h_2, HIGH);
+		delay(100);
+		// On envoi la purée
+		digitalWrite(motor_power, LOW);
+		// On attend le pin qui va bien
+		while (digitalRead(fin_course_fermeture) != LOW) {
 			delayMicroseconds(10);
 		}
 	}
@@ -130,22 +127,20 @@ void clearSerial() {
 }
 
 void setRTC() {
-	rtc.setDOW(TUESDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(0, 4, 45);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(2, 7, 2019);   // Set the date to January 1st, 2014
+	rtc.setDOW(MONDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(20, 43, 0);     // Set the time to 12:00:00 (24hr format)
+	rtc.setDate(13, 1, 2020);   // Set the date to January 1st, 2014
 }
 
 
 void selftest_func(void) {
 
 	bool read;
-
-
 	Serial.println("Self-Test Menu");
 	Serial.println("--------------------");
 	Serial.println("1. Read Time");
-	Serial.println("2. Switch all relays 2 times");
-	Serial.println("3. Read fin_course_ouverture");
+	Serial.println("2. Switch all relays 2 times each");
+	Serial.println("3. Read fin_course_*");
 	Serial.println("4. Detect position and switch position");
 	Serial.println("5. Reset Arduino");
 	Serial.println("6. setRTC()");
@@ -156,113 +151,142 @@ void selftest_func(void) {
 	Serial.println("a. open/close forever");
 	Serial.println("--------------------");
 	Serial.println("Type the number and press enter");
-
+	delay(500);
 	Serial.flush(); //flush all previous received and transmitted data
 	while(!Serial.available()) ;
 	char ch;
 	ch = Serial.read();
-	switch(ch)
-	{
-	 case '1':
-	 	Serial.println("Read Time");
-		read_time();
-		selftest_func();
-
-	case '2':
-		Serial.println("Switch pont_h_1...");
-		digitalWrite(pont_h_1, LOW);
-		delay(500);
-		digitalWrite(pont_h_2, HIGH);
-		delay(500);
-
-		Serial.println("Switch pont_h_2...");
-		digitalWrite(pont_h_1, LOW);
-		delay(500);
-		digitalWrite(pont_h_2, HIGH);
-		delay(500);
-
-		Serial.println("Switch motor_power...");
-		digitalWrite(motor_power, LOW);
-		delay(500);
-		digitalWrite(motor_power, HIGH);
-		delay(500);
-
-		selftest_func();
-
-	case '3':
-		read = digitalRead(fin_course_ouverture);
-		if (read == 1) {
-			Serial.println("=> fin_course_ouverture enclenché !\n");
-		}
-		else {
-			Serial.println("=> fin_course_ouverture non enclenché.\n");
-
-		}
-		selftest_func();
-
-	case '4':
-		read = digitalRead(fin_course_ouverture);
-		if (read == HIGH) {
-			Serial.println("=> Porte ouverte, on ferme");
-			ouvrirPorte(0);
-		}
-		else {
-			Serial.println("=> Porte fermée, on ouvre");
-			ouvrirPorte(1);
-		}
-		selftest_func();
-
-
-	case '5':
-			asm volatile ("  jmp 0");
-
-	case '6':
-			setRTC();
+	switch(ch) {
+		case '1':
+		 	Serial.println("Read Time");
+			read_time();
 			selftest_func();
+			break;
 
+		case '2':
+			Serial.println("Switch pont_h_1...");
+			digitalWrite(pont_h_1, LOW);
+			delay(500);
+			digitalWrite(pont_h_2, HIGH);
+			delay(500);
 
+			Serial.println("Switch pont_h_2...");
+			digitalWrite(pont_h_1, LOW);
+			delay(500);
+			digitalWrite(pont_h_2, HIGH);
+			delay(500);
 
-	case 'o':
-		Serial.println("=> On ferme !");
-		ouvrirPorte(1);
+			Serial.println("Switch motor_power...");
+			digitalWrite(motor_power, LOW);
+			delay(500);
+			digitalWrite(motor_power, HIGH);
+			delay(500);
+
+			selftest_func();
+			break;
+
+		case '3':
+		/*
+		 * On lit les interrupteurs de fin de course
+		 * enclenché = 1
+		 * non enclenché = 0
+		 */
+			read = digitalRead(fin_course_ouverture);
+			if (read == 1) {
+				Serial.println("=> fin_course_ouverture enclenché !\n");
+				Serial.println(read);
+			}
+			else {
+				Serial.println("=> fin_course_ouverture non enclenché.\n");
+				Serial.println(read);
+			}
+			delay(50);
+			read = digitalRead(fin_course_fermeture);
+			if (read == 0) {
+				Serial.println("=> fin_course_fermeture enclenché !\n");
+				Serial.println(read);
+			}
+			else {
+				Serial.println("=> fin_course_fermeture non enclenché.\n");
+				Serial.println(read);
+			}
+			selftest_func();
+			break;
+
+		case '4':
+			read = digitalRead(fin_course_ouverture);
+			if (read == HIGH) {
+				Serial.println("=> Porte ouverte, on ferme");
+				ouvrirPorte(0);
+			}
+			else {
+				Serial.println("=> Porte fermée, on ouvre");
+				ouvrirPorte(1);
+			}
+			selftest_func();
+			break;
+
+		case '5':
+				asm volatile ("  jmp 0");
+
+		case '6':
+				setRTC();
+				//selftest_func();
+				break;
+
+		case 'o':
+			Serial.println("=> On ouvre !");
+			ouvrirPorte(1);
+			selftest_func();
+			break;
+
+		case 'c':
+			Serial.println("=> On ferme !");
+			ouvrirPorte(0);
+			selftest_func();		Serial.println("TROP HAUT !");
+			break;
+
+		case '+':
+			if (digitalRead(fin_course_ouverture) == LOW ) {
+				// On set le pont en H pour 0V -12V
+				digitalWrite(pont_h_1, HIGH);
+				digitalWrite(pont_h_2, LOW);
+				delay(100);
+				// On envoi la purée
+				digitalWrite(motor_power, LOW);
+				delay(100);
+				digitalWrite(motor_power, HIGH);
+				digitalWrite(pont_h_1, HIGH);
+				digitalWrite(pont_h_2, HIGH);
+
+				Serial.println("On monte !");
+				selftest_func();
+				break;
+			}
+			Serial.println("TROP HAUT !");
+			selftest_func();
+			break;
+
+		case '-':
+			// On check l'état des relais
+				if (digitalRead(fin_course_fermeture) == HIGH	) {
+					// On set le pont en H +12V 0V
+					digitalWrite(pont_h_1, LOW);
+					digitalWrite(pont_h_2, HIGH);
+					delay(100);
+					// On envoi la purée
+					digitalWrite(motor_power, LOW);
+					delay(100);
+					digitalWrite(motor_power, HIGH);
+					digitalWrite(pont_h_1, HIGH);
+					digitalWrite(pont_h_2, HIGH);
+					Serial.println("On baisse !");
+					selftest_func();
+					break;
+		}
+		Serial.println("TROP BAS !");
 		selftest_func();
-
-
-
-	case 'c':
-		Serial.println("=> On ferme !");
-		ouvrirPorte(0);
-		selftest_func();
-
-
-
-
-	case '+':
-		// On set le pont en H pour 0V -12V
-		digitalWrite(pont_h_1, HIGH);
-		digitalWrite(pont_h_2, LOW);
-		delay(100);
-		// On envoi la purée
-		digitalWrite(motor_power, LOW);
-		delay(200);
-		digitalWrite(motor_power, HIGH);
-		digitalWrite(pont_h_1, HIGH);
-		digitalWrite(pont_h_2, HIGH);
-		selftest_func();
-
-
-	case '-':
-		// On set le pont en H +12V 0V
-		digitalWrite(pont_h_1, LOW);
-		digitalWrite(pont_h_2, HIGH);
-		delay(100);
-		// On envoi la purée
-		digitalWrite(motor_power, LOW);
-		delay(250);
-		digitalWrite(motor_power, HIGH);
-		digitalWrite(pont_h_1, HIGH);
-		digitalWrite(pont_h_2, HIGH);
-		selftest_func();
+		break;
 
 		case 'a':
 			uint16_t i = 0;
@@ -274,6 +298,8 @@ void selftest_func(void) {
 			}
 			selftest_func();
 
+			default:
+				selftest_func();
 
 	}
 }
@@ -301,10 +327,10 @@ void setup() {
 	for(int i=0; i<2; i++) {
 		digitalWrite(pont_h_1, LOW);
 		digitalWrite(pont_h_2, HIGH);
-		delay(200);
+		delay(100);
 		digitalWrite(pont_h_1, HIGH);
 		digitalWrite(pont_h_2, LOW);
-		delay(200);
+		delay(100);
 	}
 
 	/*
@@ -324,8 +350,9 @@ void setup() {
 
 void loop() {
 
-	bool read;
+	bool read, read2;
 	read = digitalRead(fin_course_ouverture);
+	read2 = digitalRead(fin_course_fermeture);
 	clearSerial();
 	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
 	Serial.println("Press 's' to enter self-test mode in 5 senconds");
@@ -433,7 +460,7 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						if(read == HIGH) {
+						if((read == LOW && read2 == LOW) || (read == LOW && read2 == HIGH)) {
 							ouvrirPorte(0);
 						}
 
@@ -469,7 +496,8 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						if(read == LOW) {
+						//Si porte ouverte ou indeterminée
+						if ((read == HIGH && read2 == HIGH) || (read == LOW && read2 == HIGH)) {
 							ouvrirPorte(1);
 						}
 
@@ -518,9 +546,8 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						if(read == HIGH) {
+						if((read == HIGH && read2 == HIGH) || (read == LOW && read2 == HIGH)) {
 							ouvrirPorte(0);
-							delay(100);
 						}
 
 						// Attachement d'une interruption sur front descendant de INT0
