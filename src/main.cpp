@@ -8,8 +8,8 @@
 
 #include "../lib/calsol.h"
 
-uint8_t SHIFT_NIGHT = 45;
-uint8_t SHIFT_DAY = 30;
+uint8_t SHIFT_NIGHT = 59;
+uint8_t SHIFT_DAY = 0;
 
 // Module DS3231 pour l'heure
 int gnd_rtc = 14;
@@ -127,9 +127,9 @@ void clearSerial() {
 }
 
 void setRTC() {
-	rtc.setDOW(MONDAY);     // Set Day-of-Week to SUNDAY
-	rtc.setTime(20, 43, 0);     // Set the time to 12:00:00 (24hr format)
-	rtc.setDate(13, 1, 2020);   // Set the date to January 1st, 2014
+	rtc.setDOW(THURSDAY);     // Set Day-of-Week to SUNDAY
+	rtc.setTime(13, 03, 00);
+	rtc.setDate(10, 03, 2022);   // Set the date to January 1st, 2014
 }
 
 
@@ -353,6 +353,9 @@ void loop() {
 	bool read, read2;
 	read = digitalRead(fin_course_ouverture);
 	read2 = digitalRead(fin_course_fermeture);
+  delay(1000);
+	ouvrir();
+	fermer();
 	clearSerial();
 	Serial.println("-=-=-=-=-=-=- INITIALIZATION -=-=-=-=-=-=-=-");
 	Serial.println("Press 's' to enter self-test mode in 5 senconds");
@@ -399,6 +402,7 @@ void loop() {
 
 					timestamp_time = ((float)i * 24 * 60) + ((float)t.hour * 60) + (float)t.min;
 					timestamp_cal_matin = ((float)i * 24 * 60) + ((float)DateSol_t[i][3] * 60) + (float)DateSol_t[i][4] - (float)SHIFT_DAY;
+					//timestamp_cal_matin = ((float)i * 24 * 60) + (9 * 60) + 30;
 					timestamp_cal_soir = ((float)i * 24 * 60) + ((float)DateSol_t[i][5] * 60) + (float)DateSol_t[i][6] + (float)SHIFT_NIGHT;
 					timestamp_minuit = ((float)i * 24 * 60);
 					timestamp_2359 = ((float)i * 24 * 60) + (24 * 60) -1;
@@ -430,7 +434,7 @@ void loop() {
 						Serial.print(DateSol_t[i][0]);
 						Serial.println();
 
-						Serial.print("=> CalSol without SHIFT_DAY ");
+						Serial.print("=> CalSol with SHIFT_DAY ");
 						Serial.print( DateSol_t[i][3] );
 						Serial.print(":");
 						Serial.print( DateSol_t[i][4]);
@@ -438,6 +442,7 @@ void loop() {
 
 
 						Serial.print("=> Setting Alarm1 registers @ ");
+
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
 						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
@@ -460,7 +465,9 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						if((read == LOW && read2 == LOW) || (read == LOW && read2 == HIGH)) {
+						if((read == LOW && read2 == LOW) ||
+						   (read == LOW && read2 == HIGH) ||
+						   (read == HIGH && read2 == HIGH)) {
 							ouvrirPorte(0);
 						}
 
@@ -496,8 +503,10 @@ void loop() {
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						//Si porte ouverte ou indeterminée
-						if ((read == HIGH && read2 == HIGH) || (read == LOW && read2 == HIGH)) {
+						//Si porte ouverte ou indeterminée ou fermée
+						if ((read == HIGH && read2 == HIGH) ||
+						    (read == LOW && read2 == HIGH) ||
+								(read == LOW && read2 == LOW)) {
 							ouvrirPorte(1);
 						}
 
@@ -516,14 +525,17 @@ void loop() {
 						Serial.print(DateSol_t[i+1][0]);
 						Serial.println();
 
-						Serial.print("=> CalSol without SHIFT_DAY ");
+						Serial.print("=> CalSol @");
 						Serial.print( DateSol_t[i+1][3] );
 						Serial.print(":");
 						Serial.print( DateSol_t[i+1][4]);
+						Serial.print("UTC"); //without SHIFT_DAY ");
 						Serial.println();
 
 						Serial.print("=> Setting Alarm1 registers @ ");
 
+
+						// Calsol shift BEGIN
 						//car shift, on soustrait le shift au timestamp_cal_matin
 						if (DateSol_t[i+1][4]-SHIFT_DAY < 0) {
 							Serial.print( DateSol_t[i+1][3] - 1 );
@@ -536,17 +548,21 @@ void loop() {
 							Serial.print(":");
 							Serial.print( DateSol_t[i+1][4] - SHIFT_DAY);
 							rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]-SHIFT_DAY);
-							//rtc.setAlarm1Time(t.hour, t.min+1);
 						}
 
 						Serial.print(" with ");
 						Serial.print(SHIFT_DAY);
 						Serial.println("minutes less.");
+						// Calsol shift END
 
 						rtc.setControl();
 						rtc.resetAlarm();
 
-						if((read == HIGH && read2 == HIGH) || (read == LOW && read2 == HIGH)) {
+
+							if((read == LOW && read2 == LOW) ||
+							   (read == LOW && read2 == HIGH) ||
+							   (read == HIGH && read2 == HIGH)) {
+
 							ouvrirPorte(0);
 						}
 
