@@ -8,7 +8,7 @@
 
 #include "../lib/calsol.h"
 
-uint8_t SHIFT_NIGHT = 59;
+uint8_t SHIFT_NIGHT = 15;
 uint8_t SHIFT_DAY = 0;
 
 // Module DS3231 pour l'heure
@@ -445,7 +445,7 @@ void loop() {
 
 
 						//car shift, on soustrait le shift au timestamp_cal_matin
-						if (DateSol_t[i][4]-SHIFT_DAY < 0) {
+						/*if (DateSol_t[i][4]-SHIFT_DAY < 0) {
 							Serial.print( DateSol_t[i][3] - 1 );
 							Serial.print(" : ");
 							Serial.print( (DateSol_t[i][4]-SHIFT_DAY)+60 );
@@ -457,10 +457,18 @@ void loop() {
 							Serial.print( DateSol_t[i][4] - SHIFT_DAY);
 							rtc.setAlarm1Time(DateSol_t[i][3], DateSol_t[i][4]-SHIFT_DAY);
 						}
+						*/
 
+						Serial.print( 9 );
+						Serial.print(" : ");
+						Serial.print( 30);
+						rtc.setAlarm1Time(9, 30);
+
+						/*
 						Serial.print(" with ");
 						Serial.print(SHIFT_DAY);
 						Serial.println("minutes less.");
+						*/
 
 						rtc.setControl();
 						rtc.resetAlarm();
@@ -526,6 +534,7 @@ void loop() {
 						Serial.println();
 
 						Serial.print("=> CalSol @");
+
 						Serial.print( DateSol_t[i+1][3] );
 						Serial.print(":");
 						Serial.print( DateSol_t[i+1][4]);
@@ -534,10 +543,14 @@ void loop() {
 
 						Serial.print("=> Setting Alarm1 registers @ ");
 
+						Serial.print( 9 );
+						Serial.print(" : ");
+						Serial.print( 30);
+						rtc.setAlarm1Time(9, 30);
 
 						// Calsol shift BEGIN
 						//car shift, on soustrait le shift au timestamp_cal_matin
-						if (DateSol_t[i+1][4]-SHIFT_DAY < 0) {
+						/*if (DateSol_t[i+1][4]-SHIFT_DAY < 0) {
 							Serial.print( DateSol_t[i+1][3] - 1 );
 							Serial.print(":");
 							Serial.print( (DateSol_t[i+1][4]-SHIFT_DAY)+60 );
@@ -549,10 +562,11 @@ void loop() {
 							Serial.print( DateSol_t[i+1][4] - SHIFT_DAY);
 							rtc.setAlarm1Time(DateSol_t[i+1][3], DateSol_t[i+1][4]-SHIFT_DAY);
 						}
+						*/
 
-						Serial.print(" with ");
-						Serial.print(SHIFT_DAY);
-						Serial.println("minutes less.");
+						//Serial.print(" with ");
+						//Serial.print(SHIFT_DAY);
+						//Serial.println("minutes less.");
 						// Calsol shift END
 
 						rtc.setControl();
